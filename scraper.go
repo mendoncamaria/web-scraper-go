@@ -2,13 +2,15 @@ package main
 
 import (
 	"encoding/csv"
+	"fmt"
 	"log"
 	"os"
+	"sync"
 
 	"github.com/gocolly/colly"
 )
 
-// initialize a data structure to keep the scraped data
+// product structure to keep the scraped data
 type Product struct {
 	Url, Image, Name, Price string
 }
@@ -23,7 +25,10 @@ func main() {
 	// initialize the slice of structs that will contain the scraped data
 	var products []Product
 
-	// OnHTML callback
+	// define a sync to filter visited URLs
+	var visitedUrls sync.Map
+
+	// OnHTML callback for scraping product information
 	c.OnHTML("li.product", func(e *colly.HTMLElement) {
 
 		// initialize a new Product instance
@@ -37,7 +42,22 @@ func main() {
 
 		// add the product instance with scraped data to the list of products
 		products = append(products, product)
+	})
 
+	// OnHTML callback for handling pagination
+	c.OnHTML("a.next", func(e *colly.HTMLElement) {
+
+		// extract the next page URL from the next button
+		nextPage := e.Attr("href")
+
+		// check if the nextPage URL has been visited
+		if _, found := visitedUrls.Load(nextPage); !found {
+			fmt.Println("scraping:", nextPage)
+			// mark the URL as visited
+			visitedUrls.Store(nextPage, struct{}{})
+			// visit the next page
+			e.Request.Visit(nextPage)
+		}
 	})
 
 	// store the data to a CSV after extraction
@@ -75,10 +95,9 @@ func main() {
 			// add a CSV record to the output file
 			writer.Write(record)
 		}
-		defer writer.Flush()
+		writer.Flush()
 	})
 
 	// open the target URL
 	c.Visit("https://www.scrapingcourse.com/ecommerce")
-
 }
