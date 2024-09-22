@@ -1,6 +1,6 @@
 # web-scraper-go
 
-# running
+## running
 make sure to have goLang installed in your OS. Link to install:
 <a href="https://go.dev/doc/install">here</a>
 <br/>
